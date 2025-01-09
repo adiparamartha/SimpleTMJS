@@ -24,30 +24,38 @@
 
         let model, webcam, maxPredictions, isPredicting = false;
 
-        async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
 
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
 
-            const flip = true;
-            webcam = new tmImage.Webcam(400, 400, flip);
-            await webcam.setup();
+        const flip = true;
+        webcam = new tmImage.Webcam(400, 400, flip);
+
+        try {
+            await webcam.setup({ facingMode: { ideal: "environment" } }).catch(err => {
+                console.error("Fallback to user-facing camera due to error: ", err.message);
+                return webcam.setup({ facingMode: "user" });
+            });
             await webcam.play();
             window.requestAnimationFrame(loop);
 
             document.getElementById("webcam-container").innerHTML = "";
             document.getElementById("webcam-container").appendChild(webcam.canvas);
             document.getElementById("predict-button").style.display = "inline-block";
+        } catch (err) {
+            console.error("Webcam initialization failed: ", err);
+            alert("Unable to access the camera. Please check permissions or try a different browser.");
+        }
 
-            const labelContainer = document.getElementById("label-container");
-            labelContainer.innerHTML = "";
-            for (let i = 0; i < maxPredictions; i++) {
+        const labelContainer = document.getElementById("label-container");
+        labelContainer.innerHTML = "";
+        for (let i = 0; i < maxPredictions; i++) {
                 labelContainer.appendChild(document.createElement("div"));
             }
         }
-
         async function loop() {
              if (!isPredicting) {
                 webcam.update();
